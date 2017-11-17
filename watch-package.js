@@ -4,9 +4,32 @@ var path = require('path')
 var spawn = require('child_process').spawn
 var through = require('through2')
 
-//parse arguments
-var argv = require('minimist')(process.argv.slice(2));
+function getSubArgsFor(base, limits) {
+  var argv = process.argv.slice(1);
+  console.log('subArgs',argv, base, limits);
 
+  limits = limits || [];
+  var realSubArgs = [];
+  argv.forEach((arg, index) => {
+    if(arg === base && argv[index + 1] === '--') {
+      
+      argv.slice(index + 2).some((subArg, index) => {
+        // console.log('subArg:',index+1, subArg);
+          if(limits.indexOf(subArg) >= 0) {
+            // console.log('stopping:', subArg);
+            return true;
+          }
+          realSubArgs.push(subArg);
+        })
+      }
+    });
+
+    return realSubArgs;
+  }
+
+  //parse arguments
+  var argv = require('minimist')(process.argv.slice(2));
+  
 argv._.forEach(arg => {
   const tokens = arg.split('=')
   argv[tokens[0]] = tokens[1] || true; 
@@ -52,14 +75,17 @@ module.exports = function watchPackage(_pkgDir, exit) {
   stdin.stderr = through()
   stdin.stdout = through()
 
-
-  Object.keys(pkg.watch).forEach(function (script) {
+  var tasks = Object.keys(pkg.watch);
+  tasks.forEach(function (script) {
 
     if(argv.all || argv[script]) {
       if (!pkg.scripts[script]) {
         die('No such script "' + script + '"', 2)
       }
-      startScript(script, pkg, processes, argv[script] || argv.all);
+
+      var subArgs = getSubArgsFor(script,tasks);
+
+      startScript(script, pkg, processes, subArgs.length ? subArgs.join(' ') : argv[script] || argv.all);
     } else {
       console.log('skipping: ', script );
     }
@@ -92,6 +118,7 @@ function prefixer(prefix) {
 
 function startScript(script, pkg, processes, args) {
   if(typeof args === 'string') {
+    console.log('args:', args);
     args = args.split(' ');
     args.unshift('--')
     // console.log("args:",args);
