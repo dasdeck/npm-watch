@@ -3,9 +3,17 @@
 var path = require('path')
 var spawn = require('child_process').spawn
 var through = require('through2')
+
+//parse arguments
 var argv = require('minimist')(process.argv.slice(2));
 
-argv.all = Object.keys(argv).length <= 1;
+argv._.forEach(arg => {
+  const tokens = arg.split('=')
+  argv[tokens[0]] = tokens[1] || true; 
+});
+
+argv.all = argv.all || Object.keys(argv).length <= 1;
+// console.log(argv);
 
 var npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 var nodemon = process.platform === 'win32' ? 'nodemon.cmd' : 'nodemon';
@@ -86,7 +94,7 @@ function startScript(script, pkg, processes, args) {
   if(typeof args === 'string') {
     args = args.split(' ');
     args.unshift('--')
-    console.log("args:",args);
+    // console.log("args:",args);
   } else {
     args = [];
   }
