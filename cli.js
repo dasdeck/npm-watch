@@ -6,8 +6,9 @@ var pathVarName = (windows && !('PATH' in process.env)) ? 'Path' : 'PATH'
 
 process.env[pathVarName] += path.delimiter + path.join(__dirname, 'node_modules', '.bin')
 
-var watchPackage = require('./watch-package')
-var watcher = watchPackage(process.argv[3] || process.cwd(), process.exit, process.argv[2])
+var watchPackage = require('./watch-package');
+
+var watcher = watchPackage( process.cwd(), process.exit)
 
 process.stdin.pipe(watcher)
 watcher.stdout.pipe(process.stdout)

@@ -2,8 +2,10 @@
 
 var path = require('path')
 var spawn = require('child_process').spawn
-
 var through = require('through2')
+var argv = require('minimist')(process.argv.slice(2));
+
+argv.all = Object.keys(argv).length <= 1;
 
 var npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 var nodemon = process.platform === 'win32' ? 'nodemon.cmd' : 'nodemon';
@@ -11,16 +13,12 @@ var nodemon = process.platform === 'win32' ? 'nodemon.cmd' : 'nodemon';
 var pkgDir = '';
 var stdin = null;
 
-module.exports = function watchPackage(_pkgDir, exit, taskName) {
+module.exports = function watchPackage(_pkgDir, exit) {
+
+
   pkgDir = _pkgDir;
   var pkg = require(path.join(pkgDir, 'package.json'))
   var processes = {}
-
-  taskName = typeof taskName !== 'undefined' ? taskName.trim() : '';
-
-  if (taskName === '') {
-    console.info('No task specified. Will go through all possible tasks');
-  }
 
   if (typeof pkg.watch !== 'object') {
     die('No "watch" config in package.json')
@@ -46,20 +44,19 @@ module.exports = function watchPackage(_pkgDir, exit, taskName) {
   stdin.stderr = through()
   stdin.stdout = through()
 
-  if (taskName !== '') {
-    if (!pkg.scripts[taskName]) {
-      die('No such script "' + taskName + '"', 2)
-    }
-    startScript(taskName, pkg, processes);
-  } else {
 
   Object.keys(pkg.watch).forEach(function (script) {
-    if (!pkg.scripts[script]) {
-      die('No such script "' + script + '"', 2)
+
+    if(argv.all || argv[script]) {
+      if (!pkg.scripts[script]) {
+        die('No such script "' + script + '"', 2)
+      }
+      startScript(script, pkg, processes, argv[script] || argv.all);
+    } else {
+      console.log('skipping: ', script );
     }
-    startScript(script, pkg, processes);
   })
-  }
+  
 
   return stdin
 
@@ -85,8 +82,15 @@ function prefixer(prefix) {
   })
 }
 
-function startScript(script, pkg, processes) {
-  var exec = [npm, 'run', '-s', script].join(' ')
+function startScript(script, pkg, processes, args) {
+  if(typeof args === 'string') {
+    args = args.split(' ');
+    args.unshift('--')
+    console.log("args:",args);
+  } else {
+    args = [];
+  }
+  var exec = [npm, 'run', '-s', script].concat(args).join(' ')
     var patterns = null
     var extensions = null
     var ignores = null
