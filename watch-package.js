@@ -6,7 +6,6 @@ var through = require('through2')
 
 function getSubArgsFor(base, limits) {
   var argv = process.argv.slice(1);
-  console.log('subArgs',argv, base, limits);
 
   limits = limits || [];
   var realSubArgs = [];
@@ -14,15 +13,17 @@ function getSubArgsFor(base, limits) {
     if(arg === base && argv[index + 1] === '--') {
       
       argv.slice(index + 2).some((subArg, index) => {
-        // console.log('subArg:',index+1, subArg);
           if(limits.indexOf(subArg) >= 0) {
-            // console.log('stopping:', subArg);
             return true;
           }
           realSubArgs.push(subArg);
         })
       }
     });
+
+    if(base !== 'all') { //add args for 'all'
+      realSubArgs = realSubArgs.concat(getSubArgsFor('all', limits));
+    }
 
     return realSubArgs;
   }
@@ -118,10 +119,9 @@ function prefixer(prefix) {
 
 function startScript(script, pkg, processes, args) {
   if(typeof args === 'string') {
-    console.log('args:', args);
+    console.log('args for ', script, ':' , args);
     args = args.split(' ');
     args.unshift('--')
-    // console.log("args:",args);
   } else {
     args = [];
   }
